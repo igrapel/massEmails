@@ -8,13 +8,14 @@ from sqlalchemy import create_engine
 outlook = win32com.client.Dispatch('outlook.application')
 
 class Email:
-    def __init__(self, subject, to, student, gender):
+    def __init__(self, subject, to, student, gender, topic):
         self.mail = outlook.CreateItem(0)
         self.mail.To = to
         self.mail.Subject = subject
         self.mail.Body = ""
         self.gender = gender
         self.name = student
+        self.topic = topic
         self.time_stamp = datetime.datetime.now()
         #SQL Server
         self.conn = pyodbc.connect('Driver={SQL Server};'
@@ -41,7 +42,7 @@ class Email:
         else:
             adj = "they";
             obj = "their";
-        message = "Dear parents, " + "\n\nI am " + self.name + "'s computer science teacher. " +\
+        message = "Dear parents, " + "\n\nI am " + self.name + "'s " + self.topic + " teacher. " +\
         self.name + " is not completing " + adj + " work. As a result, " +\
         self.name + " is in danger of failing the class. I hope you can speak with " + obj  + \
         " and encourage " + obj + " to put in the effort to pass the class.\n\n" +\
@@ -81,12 +82,28 @@ class Email:
                 df = pd.read_sql(statement, conn)
                 print(df.tail())
                 
- #Run:
-student = input("Student Name: ")
+    def update(self, response, address):
+        #bit io update
+        update_sql = "UPDATE \"igrapel/Parents\".\"parents\" SET response = " + \
+            "'" + response +"' WHERE \"igrapel/Parents\".\"parents\".\"contact\" LIKE '%" + address + "%' ;"
+        # Insert Values
+        self.statement = update_sql
+        with self.client.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(self.statement)
+        #SQL Server
+        update_sql_server = "UPDATE Parents SET Comment = '" + response + "' WHERE email LIKE '%" + address + "%'"
+        self.cursor.execute(update_sql_server)
+        self.conn.commit()          
+
+#Run:
+first_name = input("Student First Name: ")
+last_name = input("Student Last Name: ")
 email = input("Email Name: ")
 subject = input("Subject: ")  
-gender = input("Male or Female: ")             
-test = Email(subject, email, student, gender)
+gender = input("Male or Female: ") 
+course_title = input("Course Title: ")            
+test = Email(subject, email, first_name, gender, course_title)
 test.send()
-test.store_loc("INSERT INTO Parents VALUES ('" + student+ "', '" + email+ "', " + "'" + str(test.time_stamp) +"'" + ", '" + subject + "', 'None');")
-test.store_ext("INSERT INTO \"igrapel/Parents\".\"parents\" VALUES ('" + student + "', '" + email + "', '" + str(test.time_stamp) + "', '" + subject + "', '" + "None');", "change")
+test.store_loc("INSERT INTO Parents VALUES ('" + first_name + " " + last_name + "', '" + email + "', " + "'" + str(test.time_stamp) +"'" + ", '" + subject + "', 'None');")
+test.store_ext("INSERT INTO \"igrapel/Parents\".\"parents\" VALUES ('" + first_name + " " + last_name +"', '" + email + "', '" + str(test.time_stamp) + "', '" + subject + "', '" + "None');", "change")
